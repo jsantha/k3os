@@ -8,9 +8,23 @@ setup_motd()
 
 setup_base()
 {
-    K3OS_ISO=$(blkid -L K3OS || true)
-    if [ -n "$K3OS_ISO" ]; then
-        mount -o ro $(blkid -L K3OS) /.base
+    # Give ISO image a few chances to mount. Default implementation sometimes fails
+    # (blkid -L K3OS returns nothing) when remotly mounting ISO (i.e. when using
+    # HP iLO Integrated Remote Console).
+    for (( r=0; r < 10; r++)); do
+        K3OS_ISO=$(blkid -L K3OS || true)
+        if [ -n "$K3OS_ISO" ]; then
+            success=true
+            mount -o ro $(blkid -L K3OS) /.base            
+            break
+        fi
+
+        pinfo "Waiting for ISO for $((r+1)) seconds"
+        sleep 1
+    done
+    
+    if [ "$success" = "true" ]; then
+        pinfo "Success"
     else
         success=false
         for (( j=0; j < 5 ; j++ )); do
